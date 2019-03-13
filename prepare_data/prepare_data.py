@@ -47,13 +47,13 @@ mlab.show()
 '''
 
 #读取点云数据
-Lidar_file_dir=os.path.join(LIDAR_DIR,'000001.bin')
+Lidar_file_dir=os.path.join(LIDAR_DIR,'000003.bin')
 scan = np.fromfile(Lidar_file_dir, dtype=np.float32)
 scan = scan.reshape((-1, 4))
 
 #尝试读取标定信息
 
-calib_file_dir=os.path.join(CALIB_DIR,'000001.txt')
+calib_file_dir=os.path.join(CALIB_DIR,'000003.txt')
 calib_data={}
 with open(calib_file_dir,'r') as rf:
     for line in rf.readlines():
@@ -77,7 +77,7 @@ Tr_velo_to_cam=np.reshape(Tr_velo_to_cam,[3,4])
 
 
 #尝试读取label文件
-label_file_dir=os.path.join(LABEL_DIR,'000001.txt')
+label_file_dir=os.path.join(LABEL_DIR,'000003.txt')
 object_3d=[]
 with open(label_file_dir,'r') as rf:
     for line in rf.readlines():
@@ -120,17 +120,16 @@ pts_in_rect=project_ref_to_rect(pts_in_ref)
 
 #把点云投影到 iamge2坐标系上
 
-pts_in_image_2D=project_rect_to_image(pts_in_rect,P2)
+pts_in_image_2D_2=project_rect_to_image(pts_in_rect,P2)
+pts_in_image_2D_3=project_rect_to_image(pts_in_rect,P3)
 
+fov_2d_inds_2=extract_pts_from_2D(pts_in_image_2D_2, object_3d[0].xmin, object_3d[0].ymin, object_3d[0].xmax, object_3d[0].ymax)
 
-fov_2d_inds=extract_pts_from_2D(pts_in_image_2D, object_3d[0].xmin, object_3d[0].ymin, object_3d[0].xmax, object_3d[0].ymax)
-
-pts_fov_in_rect=pts_in_rect[fov_2d_inds,:]
+pts_fov_in_rect=pts_in_rect[fov_2d_inds_2,:]
 
 #把过滤出来的点云投影到第二张照片上
 pts_fov_in_image3=project_rect_to_image(pts_fov_in_rect,P3)
 #找到这些点云的边界
-print(fov_2d_inds)
 
 xmin3=pts_fov_in_image3[0,0] ;ymin3=pts_fov_in_image3[0,1];xmax3=pts_fov_in_image3[0,0];ymax3=pts_fov_in_image3[0,1]
 for p in pts_fov_in_image3:
@@ -143,9 +142,21 @@ for p in pts_fov_in_image3:
     if p[1]>ymax3:
         ymax3=p[1]
 print(xmin3,ymin3,xmax3,ymax3)    
+#进行修正 
+xmax3=xmin3+(object_3d[0].xmax-object_3d[0].xmin)
 
-filename3_dir=os.path.join(PICTURE3_DIR,'000001.png')
-filename2_dir=os.path.join(PICTURE2_DIR,'000001.png')
+fov_2d_inds_3=extract_pts_from_2D(pts_in_image_2D_3,xmin3,ymin3,xmax3,ymax3)
+fov_2d_inds=fov_2d_inds_2 & fov_2d_inds_3
+
+pts_fov2=scan[fov_2d_inds_2,:]
+pts_fov=scan[fov_2d_inds,:]
+
+fig = mlab.figure(figure=None, bgcolor=(0.4,0.4,0.4),fgcolor=None, engine=None, size=(500, 500))
+mlab.points3d(pts_fov2[:,0], pts_fov2[:,1], pts_fov2[:,2], pts_fov2[:,1], mode='point',    colormap='gnuplot', scale_factor=1, figure=fig)
+mlab.show()
+'''
+filename3_dir=os.path.join(PICTURE3_DIR,'000003.png')
+filename2_dir=os.path.join(PICTURE2_DIR,'000003.png')
 picture2=cv2.imread(filename2_dir)
 picture3=cv2.imread(filename3_dir)
 cv2.namedWindow('picture2',cv2.WINDOW_AUTOSIZE)
@@ -156,5 +167,6 @@ cv2.imshow('picture2',picture2)
 cv2.imshow('picture3',picture3)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+'''
 
             
